@@ -51,7 +51,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         _isLoading = true;
                       });
 
-                      signIn();
+                      signwithgoogle();
 
                       setState(() {
                         _isLoading = false;

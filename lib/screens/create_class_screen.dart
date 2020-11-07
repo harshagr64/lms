@@ -35,9 +35,9 @@ class CreateClassScreen extends StatelessWidget {
       ),
       body: Container(
         padding: EdgeInsets.all(8),
-        child: CreateClassFormWidget(),
+        child: CreateForm(),
       ),
-      drawer: AppDrawerWidget(),
+      drawer: AppDrawer(),
     );
   }
 }

@@ -1,116 +1,138 @@
-import "package:flutter/material.dart";
-import "package:cloud_firestore/cloud_firestore.dart";
-import "package:firebase_auth/firebase_auth.dart";
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:mailer/mailer.dart';
+import 'package:mailer/smtp_server.dart';
+import 'package:intl/intl.dart';
 
-class CreateClassFormWidget extends StatefulWidget {
+class CreateForm extends StatefulWidget {
   @override
-  _CreateClassFormWidgetState createState() => _CreateClassFormWidgetState();
+  _CreateFormState createState() => _CreateFormState();
 }
 
-class _CreateClassFormWidgetState extends State<CreateClassFormWidget> {
-  String _value;
-  final _formKey = GlobalKey<FormState>();
-  final _titleNode = FocusNode();
-  final _secNode = FocusNode();
-  final _subNode = FocusNode();
-  final _semNode = FocusNode();
-
-  Map<String, Object> _classData = {
+class _CreateFormState extends State<CreateForm> {
+  final _sub = GlobalKey<FormState>();
+  int _value = 0;
+  Map<String, Object> _data = {
     'title': null,
     'sem': null,
     'section': null,
-    'subCode': null,
+    'subjectcode': null,
   };
+  final _titlenode = FocusNode();
+  final _sectionenode = FocusNode();
+  final _subjectnode = FocusNode();
+  final _semnode = FocusNode();
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    _titlenode.dispose();
+    _sectionenode.dispose();
+    _subjectnode.dispose();
+    _semnode.dispose();
+    super.dispose();
+  }
 
-  void _saveForm() async{
-    final _isValid = _formKey.currentState.validate();
-
-    if (!_isValid) {
+  void _saveform() async {
+    final isvalid = _sub.currentState.validate();
+    if (!isvalid) {
       return;
     }
-
     FocusScope.of(context).unfocus();
-    _formKey.currentState.save();
+    _sectionenode.unfocus();
+    _titlenode.unfocus();
+    _subjectnode.unfocus();
 
-    FirebaseFirestore _cloudInstance = FirebaseFirestore.instance;
-    User user = FirebaseAuth.instance.currentUser;
+    _sub.currentState.save();
+    _sub.currentState.reset();
 
+    FirebaseFirestore _dat = FirebaseFirestore.instance;
+    User _user = FirebaseAuth.instance.currentUser;
     final time = DateTime.now();
-    // print(user.uid.substring(0,6));
-    await _cloudInstance
-        .collection('newclasses')
-        .doc(user.uid)
-        .collection('totalclasses')
-        .doc('${user.uid.substring(0,6)}$time')
-        .set(_classData);
+    final time1 = DateTime.now().hour;
+    final time2 = DateTime.now().minute;
+    final time3 = DateTime.now().millisecond;
+    final userid = _user.uid.substring(0, 6);
+    final classid = '$userid$time1$time2$time3';
+    final date=DateFormat('dd-MM-yyyy').format(time);
+    await _dat
+        .collection('newclass')
+        .doc(_user.uid)
+        .collection('totalclass')
+        .doc(classid)
+        .set({
+      'title': _data['title'],
+      'sem': _data['sem'],
+      'section': _data['section'],
+      'subjectcode': _data['subjectcode'],
+      'createdate': time,
+      'date':date,
+      'classid':classid,
+    });
+    Scaffold.of(context).showSnackBar(SnackBar(
+      backgroundColor: Colors.black,
+      duration: Duration(seconds: 5),
+      content: Text('Class Created Successfully'),
+    ));
+    String username = '63harshtry@gmail.com';
+    String password = 'test63@gmail.com';
 
-    print(_classData['title']);
+    final smtpServer = gmail(username, password);
+
+    final message = Message()
+      ..from = Address(username, 'Classroom')
+      ..recipients.add(_user.email)
+      ..subject = 'Class ID'
+      ..text = '$classid';
+
+    try {
+      final sendReport = await send(message, smtpServer);
+      print('Message sent: ' +
+          sendReport.toString()); //print if the email is sent
+    } on MailerException catch (e) {
+      print('Message not sent. \n' +
+          e.toString()); //print if the email is not sent
+      // e.toString() will show why the email is not sending
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Form(
-      key: _formKey,
+      key: _sub,
       child: ListView(
-        padding: EdgeInsets.symmetric(horizontal: 10),
         children: [
           SizedBox(
             height: 10,
           ),
           Text(
-            "Create Class",
+            'Create Class',
             style: TextStyle(
-              fontSize: 20,
-              color: Colors.black,
-            ),
-          ),
-          SizedBox(
-            height: 20,
-          ),
-          TextFormField(
-            focusNode: _titleNode,
-            cursorColor: Colors.black,
-            textInputAction: TextInputAction.next,
-            onFieldSubmitted: (_) =>
-                FocusScope.of(context).requestFocus(_semNode),
-            validator: (value) {
-              if (value.isEmpty) {
-                return 'Please Enter Class Title';
-              }
-
-              return null;
-            },
-            onSaved: (value) {
-              _classData['title'] = value;
-            },
-            decoration: InputDecoration(
-              hintText: 'Class Title*',
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(width: 2, color: Colors.black)),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Colors.black)),
-              contentPadding:
-                  EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.blueGrey[900],
             ),
           ),
           SizedBox(
             height: 15,
           ),
-          DropdownButtonFormField(
-            focusNode: _semNode,
-            value: _value,
-            onSaved: (value) {
-              _classData['sem'] = value;
-            },
+          TextFormField(
             validator: (value) {
-              if (value == null) {
-                return "Please Select SEM";
+              if (value.isEmpty) {
+                return 'please enter class title';
               }
               return null;
             },
+            onSaved: (value) {
+              _data['title'] = value;
+            },
+            focusNode: _titlenode,
+            onFieldSubmitted: (_) =>
+                FocusScope.of(context).requestFocus(_semnode),
+            textInputAction: TextInputAction.next,
+            cursorColor: Colors.black,
             decoration: InputDecoration(
+              hintText: 'Class Title*',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -120,117 +142,146 @@ class _CreateClassFormWidgetState extends State<CreateClassFormWidget> {
               contentPadding:
                   EdgeInsets.symmetric(vertical: 13, horizontal: 10),
             ),
-            hint: Text('SEM*'),
-            items: [
-              DropdownMenuItem(
-                child: Text('1'),
-                value: 1.toString(),
-              ),
-              DropdownMenuItem(
-                child: Text('2'),
-                value: 2.toString(),
-              ),
-              DropdownMenuItem(
-                child: Text('3'),
-                value: 3.toString(),
-              ),
-              DropdownMenuItem(
-                child: Text('4'),
-                value: 4.toString(),
-              ),
-              DropdownMenuItem(
-                child: Text('5'),
-                value: 5.toString(),
-              ),
-              DropdownMenuItem(
-                child: Text('6'),
-                value: 6.toString(),
-              ),
-              DropdownMenuItem(
-                child: Text('7'),
-                value: 7.toString(),
-              ),
-              DropdownMenuItem(
-                child: Text('8'),
-                value: 8.toString(),
-              ),
-            ],
-            onChanged: (value) {
-              setState(() {
-                _value = value;
-              });
-            },
           ),
           SizedBox(
             height: 15,
           ),
+          DropdownButtonFormField(
+              validator: (value) {
+                if (value == null) {
+                  return 'please choose semester';
+                }
+                return null;
+              },
+              onSaved: (value) {
+                _data['sem'] = value;
+              },
+              focusNode: _semnode,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.black),
+                ),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+              ),
+              hint: Text('SEM*'),
+              items: [
+                DropdownMenuItem(
+                  child: Text('1'),
+                  value: 1,
+                ),
+                DropdownMenuItem(
+                  child: Text('2'),
+                  value: 2,
+                ),
+                DropdownMenuItem(
+                  child: Text('3'),
+                  value: 3,
+                ),
+                DropdownMenuItem(
+                  child: Text('4'),
+                  value: 4,
+                ),
+                DropdownMenuItem(
+                  child: Text('5'),
+                  value: 5,
+                ),
+                DropdownMenuItem(
+                  child: Text('6'),
+                  value: 6,
+                ),
+                DropdownMenuItem(
+                  child: Text('7'),
+                  value: 7,
+                ),
+                DropdownMenuItem(
+                  child: Text('8'),
+                  value: 8,
+                ),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  value = _value;
+                });
+              }),
+          SizedBox(
+            height: 15,
+          ),
           TextFormField(
-            focusNode: _secNode,
+            validator: (value) {
+              if (value.isEmpty) {
+                return 'please enter Section';
+              }
+              return null;
+            },
+            onSaved: (value) {
+              _data['section'] = value;
+            },
+            focusNode: _sectionenode,
             onFieldSubmitted: (_) =>
-                FocusScope.of(context).requestFocus(_subNode),
+                FocusScope.of(context).requestFocus(_subjectnode),
             textInputAction: TextInputAction.next,
             cursorColor: Colors.black,
-            onSaved: (value) {
-              _classData['section'] = value;
-            },
-            validator: (value) {
-              if (value.isEmpty) {
-                return 'Please Enter Section';
-              }
-              return null;
-            },
             decoration: InputDecoration(
               hintText: 'Section*',
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(width: 2, color: Colors.black)),
               border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Colors.black)),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.black),
+              ),
               contentPadding:
-                  EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+                  EdgeInsets.symmetric(vertical: 13, horizontal: 10),
             ),
           ),
           SizedBox(
             height: 15,
           ),
           TextFormField(
-            focusNode: _subNode,
-            cursorColor: Colors.black,
-            onSaved: (value) {
-              _classData['subCode'] = value;
-            },
             validator: (value) {
               if (value.isEmpty) {
-                return 'Please Enter Subject Code';
+                return 'please enter Subject code';
               }
               return null;
             },
+            onSaved: (value) {
+              _data['subjectcode'] = value;
+            },
+            focusNode: _subjectnode,
+            cursorColor: Colors.black,
             decoration: InputDecoration(
               hintText: 'Subject Code*',
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(width: 2, color: Colors.black)),
               border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Colors.black)),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.black),
+              ),
               contentPadding:
-                  EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+                  EdgeInsets.symmetric(vertical: 13, horizontal: 10),
             ),
           ),
           SizedBox(
-            height: 30,
+            height: 25,
           ),
           FlatButton(
-            onPressed: _saveForm,
             padding: EdgeInsets.all(15),
-            color: Colors.black87,
+            onPressed: _saveform,
             shape: RoundedRectangleBorder(
-              borderRadius: new BorderRadius.circular(30.0),
+                borderRadius: BorderRadius.circular(30.0)),
+            color: Colors.black,
+            child: Text(
+              'Create',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 1,
+              ),
             ),
-            child: Text("Create",
-                style: TextStyle(
-                    fontSize: 18, color: Colors.white, letterSpacing: 1)),
           )
         ],
       ),

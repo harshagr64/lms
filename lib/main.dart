@@ -4,7 +4,9 @@ import 'package:lms/screens/demo.dart';
 import "screens/auth_screen.dart";
 import "package:firebase_auth/firebase_auth.dart";
 import "screens/home_screen.dart";
+import "screens/class_screen.dart";
 import "screens/create_class_screen.dart";
+import "screens/upload_screen.dart";
 import "package:flutter_statusbarcolor/flutter_statusbarcolor.dart";
 
 void main() async {
@@ -24,6 +26,8 @@ class MyApp extends StatelessWidget {
       home: Demo(),
       routes: {
         CreateClassScreen.routeName: (ctx) => CreateClassScreen(),
+        ClassScreen.routeName: (ctx) => ClassScreen(),
+        UploadScreen.routeName: (ctx) => UploadScreen(),
       },
     );
   }

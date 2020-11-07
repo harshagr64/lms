@@ -1,44 +1,45 @@
-import "package:firebase_auth/firebase_auth.dart";
-import "package:google_sign_in/google_sign_in.dart";
-import "package:cloud_firestore/cloud_firestore.dart";
-
-bool _isFaculty = true;
-
-final GoogleSignIn _googleSignIn = GoogleSignIn();
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/material.dart';
+bool isfaculty = true;
 final FirebaseAuth _auth = FirebaseAuth.instance;
+final GoogleSignIn googleSignIn = new GoogleSignIn();
+GoogleSignInAccount googleSignInAccount;
 
-Future<User> signIn() async {
-  GoogleSignInAccount _signInAcc = await _googleSignIn.signIn();
-  GoogleSignInAuthentication _gsa = await _signInAcc.authentication;
+Future<User> signwithgoogle() async {
+  final GoogleSignInAccount account = await googleSignIn.signIn();
+  
 
-  AuthCredential _credential = GoogleAuthProvider.credential(
-    accessToken: _gsa.accessToken,
-    idToken: _gsa.idToken,
+  final GoogleSignInAuthentication googleauth = await account.authentication;
+
+  final AuthCredential usercredential = GoogleAuthProvider.credential(
+    accessToken: googleauth.accessToken,
+    idToken: googleauth.idToken,
   );
-
-  UserCredential userCred = await _auth.signInWithCredential(_credential);
-  User user = userCred.user;
-
+  final UserCredential userre =
+      await _auth.signInWithCredential(usercredential);
+  final user = userre.user;
   if (user.email.startsWith(RegExp(r'[0-9]'))) {
-    _isFaculty = false;
+    isfaculty = false;
   } else {
-    _isFaculty = true;
+    isfaculty = true;
   }
-  // print(_isFaculty);
   await FirebaseFirestore.instance
-      .collection(_isFaculty ? 'facultyusers' : 'studentusers')
+      .collection(isfaculty ? 'faculty_user' : 'student_user')
       .doc(user.uid)
       .set({
     'email': user.email,
-    'imageUrl': user.photoURL,
-    'name': user.displayName,
+    'imageurl': user.photoURL,
+    'username': user.displayName,
   });
-  // print('${user.displayName}');
+  print('${user.displayName}');
   return user;
 }
 
-void signOut() async {
-  await _auth.signOut();
-  await _googleSignIn.signOut();
-  print("User Logged Out");
+void signout(BuildContext context) {
+  _auth.signOut();
+  googleSignIn.signOut();
+  Navigator.of(context).pushReplacementNamed('/');
+  print('user log out');
 }
